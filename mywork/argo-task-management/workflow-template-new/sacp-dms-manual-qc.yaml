@@ -1,0 +1,102 @@
+metadata:
+  name: sacp-dms-manual-qc
+  namespace: sacp-dms-argo
+  uid: 00e1bd93-1702-4fa0-a787-bb9e2012ccdd
+  resourceVersion: "34700134"
+  generation: 11
+  creationTimestamp: "2026-07-03T07:52:48Z"
+  labels:
+    workflows.argoproj.io/action: Update
+    workflows.argoproj.io/actor: "287827"
+    workflows.argoproj.io/creator: "287827"
+  managedFields:
+    - manager: argo
+      operation: Update
+      apiVersion: argoproj.io/v1alpha1
+      time: "2026-07-07T08:36:13Z"
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            ".": {}
+            f:workflows.argoproj.io/action: {}
+            f:workflows.argoproj.io/actor: {}
+            f:workflows.argoproj.io/creator: {}
+        f:spec: {}
+spec:
+  onExit: exit-handler
+  templates:
+    - name: manual-qc
+      inputs:
+        parameters:
+          - name: slice_id
+          - name: start_time_ns
+          - name: end_time_ns
+          - name: file_list
+      outputs: {}
+      metadata: {}
+      container:
+        name: ""
+        image: hb.seres.cn/sacp-cicd-common/sacp-dms-data-process:qc-0.0.1.4
+        command:
+          - python
+          - manual_qc/cli.py
+        args:
+          - --slice_id
+          - "{{inputs.parameters.slice_id}}"
+          - --start_time_ns
+          - "{{inputs.parameters.start_time_ns}}"
+          - --end_time_ns
+          - "{{inputs.parameters.end_time_ns}}"
+          - --file_list
+          - "{{inputs.parameters.file_list}}"
+        env:
+          - name: CLEANUP_AFTER_UPLOAD
+            value: "True"
+          - name: COMMON_COMPRESSION
+            value: zstd
+          - name: DMS_DATA_MANAGER_URL
+            value: http://sacp-dms-data-server.sacp-dms:80/
+          - name: ENABLE_S3_UPLOAD
+            value: "True"
+          - name: S3_ACCESS_KEY
+            value: u2eulaxc57rituvke7n9
+          - name: S3_BUCKET
+            value: st-cq-dev-sacp-data-dms
+          - name: S3_ENDPOINT_URL
+            value: http://objectstor01.cloud-test.seres.cn:8060
+          - name: S3_SECRET_KEY
+            value: 97t8v92qmnkpmdk1s8qvnoekd9qkc789ln51e6ew
+        resources:
+          limits:
+            cpu: "16"
+            memory: 32Gi
+          requests:
+            cpu: "16"
+            memory: 32Gi
+    - name: exit-handler
+      http:
+        url: "http://sacp-dms-data-server.sacp-dms:80/argo/tasks/callback"
+        method: "POST"
+        headers:
+          - name: "Content-Type"
+            value: "application/json"
+        body: |
+          {
+            "workflowName": "{{workflow.name}}",
+            "status": "{{workflow.status}}",
+            "message": "workflow finished with status {{workflow.status}}"
+          }
+  entrypoint: manual-qc
+  arguments:
+    parameters:
+      - name: slice_id
+        value: test_manual_qc_001
+      - name: start_time_ns
+        value: "1782914069901000000"
+      - name: end_time_ns
+        value: "1782914071901000000"
+      - name: file_list
+        value: '[
+          {"file_name":"raw/2026/07/01/20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/adc_20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/10000_1782914062256/struct_202607011355_002/struct_202607011355_002_0.mcap","type":"struct"},{"file_name":"raw/2026/07/01/20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/adc_20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/10000_1782914062256/geo_202607011355_002/geo_202607011355_002_0.mcap","type":"geo"},{"file_name":"raw/2026/07/01/20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/adc_20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/10000_1782914062256/video_202607011354_001/video_202607011354_001_0.mcap","type":"camera"},{"file_name":"raw/2026/07/01/20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/adc_20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/10000_1782914062256/video_202607011355_002/video_202607011355_002_0.mcap","type":"camera"},{"file_name":"raw/2026/07/01/20260701_215422_019f1df5-97b0-71a2-a1ae-b79eecbc8926/truth-slice/lidar_202607011355_002.mcap","type":"pcd_truth"}
+          ]'

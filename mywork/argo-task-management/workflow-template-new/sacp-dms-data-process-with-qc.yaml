@@ -1,0 +1,204 @@
+metadata:
+  name: sacp-dms-data-process-with-qc
+  namespace: sacp-dms-argo
+  uid: 3451c6e2-e4b5-4c81-937b-b87391743479
+  resourceVersion: "34633810"
+  generation: 44
+  creationTimestamp: "2026-06-15T06:13:59Z"
+  labels:
+    workflows.argoproj.io/action: Update
+    workflows.argoproj.io/actor: "287827"
+    workflows.argoproj.io/creator: "287827"
+  managedFields:
+    - manager: argo
+      operation: Update
+      apiVersion: argoproj.io/v1alpha1
+      time: "2026-07-07T05:36:18Z"
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            ".": {}
+            f:workflows.argoproj.io/action: {}
+            f:workflows.argoproj.io/actor: {}
+            f:workflows.argoproj.io/creator: {}
+        f:spec: {}
+spec:
+  onExit: exit-handler
+  templates:
+    - name: data-process
+      inputs:
+        parameters:
+          - name: s3_path
+          - name: data_id
+          - name: vis_enable
+          - name: truth_flag
+      outputs: {}
+      metadata: {}
+      dag:
+        tasks:
+          - name: data-parse
+            template: data-parse
+            arguments:
+              parameters:
+                - name: s3_path
+                  value: "{{inputs.parameters.s3_path}}"
+                - name: data_id
+                  value: "{{inputs.parameters.data_id}}"
+                - name: vis_enable
+                  value: "{{inputs.parameters.vis_enable}}"
+                - name: truth_flag
+                  value: "{{inputs.parameters.truth_flag}}"
+          - name: qc-analysis
+            template: qc-analysis
+            arguments:
+              parameters:
+                - name: s3_path
+                  value: "{{inputs.parameters.s3_path}}"
+                - name: data_id
+                  value: "{{inputs.parameters.data_id}}"
+                - name: truth_flag
+                  value: "{{inputs.parameters.truth_flag}}"
+    - name: data-parse
+      inputs:
+        parameters:
+          - name: s3_path
+          - name: data_id
+          - name: vis_enable
+          - name: truth_flag
+      outputs: {}
+      metadata: {}
+      container:
+        name: ""
+        image: hb.seres.cn/sacp-cicd-common/sacp-dms-data-process:data-0.0.16
+        command:
+          - python
+          - data_parse/pipeline.py
+        args:
+          - --s3_path
+          - "{{inputs.parameters.s3_path}}"
+          - --data_id
+          - "{{inputs.parameters.data_id}}"
+          - --vis_enable
+          - "{{inputs.parameters.vis_enable}}"
+          - --truth_flag
+          - "{{inputs.parameters.truth_flag}}"
+        env:
+          - name: VIDEO_DOWNSAMPLE_RESOLUTION
+            value: "720"
+          - name: CLEANUP_AFTER_UPLOAD
+            value: "True"
+          - name: COMMON_COMPRESSION
+            value: zstd
+          - name: DMS_DATA_MANAGER_URL
+            value: http://sacp-dms-data-server.sacp-dms:80/
+          - name: ENABLE_S3_UPLOAD
+            value: "True"
+          - name: KAFKA_BOOTSTRAP_SERVERS
+            value: 10.81.140.253:39553
+          - name: KAFKA_PASSWORD
+            value: anhjhga_236F3265
+          - name: KAFKA_USERNAME
+            value: kafka-af137a14-admin
+          - name: PCD_VOXEL_SIZE
+            value: "30"
+          - name: S3_ACCESS_KEY
+            value: u2eulaxc57rituvke7n9
+          - name: S3_BUCKET
+            value: st-cq-dev-sacp-data-dms
+          - name: S3_ENDPOINT_URL
+            value: http://objectstor01.cloud-test.seres.cn:8060
+          - name: S3_SECRET_KEY
+            value: 97t8v92qmnkpmdk1s8qvnoekd9qkc789ln51e6ew
+          - name: VIDEO_SHARD_MAX_WORKERS
+            value: "8"
+          - name: enable_video_downsample
+            value: "True"
+        resources:
+          limits:
+            cpu: "32"
+            memory: 80Gi
+          requests:
+            cpu: "2"
+            memory: 8Gi
+    - name: qc-analysis
+      inputs:
+        parameters:
+          - name: s3_path
+          - name: data_id
+          - name: truth_flag
+      outputs: {}
+      metadata: {}
+      container:
+        name: ""
+        image: hb.seres.cn/sacp-cicd-common/sacp-dms-data-process:data-0.0.16
+        command:
+          - python
+          - data_parse/pipeline_qc.py
+        args:
+          - --s3_path
+          - "{{inputs.parameters.s3_path}}"
+          - --data_id
+          - "{{inputs.parameters.data_id}}"
+          - --truth_flag
+          - "{{inputs.parameters.truth_flag}}"
+        env:
+          - name: VIDEO_DOWNSAMPLE_RESOLUTION
+            value: "720"
+          - name: CLEANUP_AFTER_UPLOAD
+            value: "True"
+          - name: COMMON_COMPRESSION
+            value: zstd
+          - name: DMS_DATA_MANAGER_URL
+            value: http://sacp-dms-data-server.sacp-dms:80/
+          - name: ENABLE_S3_UPLOAD
+            value: "True"
+          - name: KAFKA_BOOTSTRAP_SERVERS
+            value: 10.81.140.253:39553
+          - name: KAFKA_PASSWORD
+            value: anhjhga_236F3265
+          - name: KAFKA_USERNAME
+            value: kafka-af137a14-admin
+          - name: PCD_VOXEL_SIZE
+            value: "30"
+          - name: S3_ACCESS_KEY
+            value: u2eulaxc57rituvke7n9
+          - name: S3_BUCKET
+            value: st-cq-dev-sacp-data-dms
+          - name: S3_ENDPOINT_URL
+            value: http://objectstor01.cloud-test.seres.cn:8060
+          - name: S3_SECRET_KEY
+            value: 97t8v92qmnkpmdk1s8qvnoekd9qkc789ln51e6ew
+          - name: enable_video_downsample
+            value: "True"
+        resources:
+          limits:
+            cpu: "32"
+            memory: 64Gi
+          requests:
+            cpu: "2"
+            memory: 8Gi
+    - name: exit-handler
+      http:
+        url: "http://sacp-dms-data-server.sacp-dms:80/argo/tasks/callback"
+        method: "POST"
+        headers:
+          - name: "Content-Type"
+            value: "application/json"
+        body: |
+          {
+            "workflowName": "{{workflow.name}}",
+            "status": "{{workflow.status}}",
+            "message": "workflow finished with status {{workflow.status}}"
+          }
+  entrypoint: data-process
+  arguments:
+    parameters:
+      - name: s3_path
+        value: raw/2026/06/17/019ed003-0df7-7120-88f5-df8d83547a94/adc_019ed003-0df7-7120-88f5-df8d83547a94
+      - name: data_id
+        value: "2067209677984182273"
+      - name: vis_enable
+        value: "true"
+      - name: truth_flag
+        value: "false"
